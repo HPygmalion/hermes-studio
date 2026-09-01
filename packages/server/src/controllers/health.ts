@@ -46,18 +46,10 @@ const LOCAL_VERSION = typeof __APP_VERSION__ !== 'undefined'
 let cachedLatestVersion = ''
 
 export async function checkLatestVersion(): Promise<void> {
-  try {
-    const packageName = PACKAGE_INFO?.name || 'hermes-web-ui'
-    const registryName = encodeURIComponent(packageName)
-    const res = await fetch(`https://registry.npmjs.org/${registryName}/latest`, { signal: AbortSignal.timeout(10000) })
-    if (res.ok) {
-      const data = await res.json() as { version: string }
-      cachedLatestVersion = data.version
-      if (LOCAL_VERSION && cachedLatestVersion !== LOCAL_VERSION) {
-        console.log(`Update available: ${LOCAL_VERSION} → ${cachedLatestVersion}`)
-      }
-    }
-  } catch { /* ignore */ }
+  // Version checks are disabled in this fork. The build follows a pinned
+  // `lts` tag; there is no upstream npm release to track, so we never poll
+  // the npm registry and never advertise an update.
+  cachedLatestVersion = ''
 }
 
 export function startVersionCheck(): void {
