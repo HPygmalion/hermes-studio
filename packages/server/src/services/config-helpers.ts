@@ -32,6 +32,8 @@ export const PROVIDER_ENV_MAP: Record<string, { api_key_env: string; base_url_en
   cliproxyapi: { api_key_env: '', base_url_env: '' },
   'opencode-zen': { api_key_env: 'OPENCODE_ZEN_API_KEY', base_url_env: 'OPENCODE_ZEN_BASE_URL' },
   'opencode-go': { api_key_env: 'OPENCODE_GO_API_KEY', base_url_env: 'OPENCODE_GO_BASE_URL' },
+  // OpenCode Free — Hermes Agent v0.21.0 内置的匿名免费层(keyless, 无需任何 key)
+  'opencode-free': { api_key_env: '', base_url_env: '' },
   huggingface: { api_key_env: 'HF_TOKEN', base_url_env: 'HF_BASE_URL' },
   arcee: { api_key_env: 'ARCEE_API_KEY', base_url_env: 'ARCEE_BASE_URL' },
   stepfun: { api_key_env: 'STEPFUN_API_KEY', base_url_env: 'STEPFUN_BASE_URL' },

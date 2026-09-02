@@ -343,6 +343,8 @@ async function buildAvailableForProfile(
       if (providerKey === 'copilot') {
         if (!copilotEnabled) continue
         if (!(await isCopilotAuthorized(envContent))) continue
+      } else if (providerKey === 'opencode-free') {
+        // 内置匿名免费层: 无需 key / OAuth, 恒展示
       } else if (!isOAuthAuthorized(providerKey)) {
         continue
       }

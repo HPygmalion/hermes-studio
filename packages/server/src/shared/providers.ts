@@ -378,6 +378,21 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     ],
   },
   {
+    label: 'OpenCode Free',
+    value: 'opencode-free',
+    builtin: true,
+    base_url: 'https://opencode.ai/zen/v1',
+    models: [
+      'deepseek-v4-flash-free',
+      'hy3-free',
+      'mimo-v2.5-free',
+      'laguna-s-2.1-free',
+      'nemotron-3-ultra-free',
+      'nemotron-3.5-lightning-free',
+      'muse-spark-1.2-contributor-free',
+    ],
+  },
+  {
     label: 'LongCat',
     value: 'longcat',
     builtin: true,
