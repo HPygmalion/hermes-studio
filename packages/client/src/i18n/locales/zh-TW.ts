@@ -1,7 +1,7 @@
 export default {
   // 登入
   login: {
-    title: 'Hermes Web UI',
+    title: 'Hermes',
     description: '輸入使用者名稱和密碼以繼續。',
     placeholder: '存取權杖',
     submit: '登入',

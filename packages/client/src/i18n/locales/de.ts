@@ -1,7 +1,7 @@
 export default {
   // Login
   login: {
-    title: 'Hermes Web UI',
+    title: 'Hermes',
     description: 'Geben Sie Benutzername und Passwort ein, um fortzufahren.',
     placeholder: 'Zugangs-Token',
     submit: 'Anmelden',

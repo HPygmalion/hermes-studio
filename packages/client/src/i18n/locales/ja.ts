@@ -1,7 +1,7 @@
 export default {
   // ログイン
   login: {
-    title: 'Hermes Web UI',
+    title: 'Hermes',
     description: 'ユーザー名とパスワードを入力して続行してください。',
     placeholder: 'アクセストークン',
     submit: 'ログイン',
