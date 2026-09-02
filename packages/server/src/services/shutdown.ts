@@ -2,7 +2,7 @@ import { logger } from './logger'
 import { closeDb } from '../db'
 import { stopPreviewRuntime } from '../controllers/update'
 
-export function bindShutdown(server: any, groupChatServer?: any, chatRunServer?: any, agentBridgeManager?: any): void {
+export function bindShutdown(server: any, chatRunServer?: any, agentBridgeManager?: any): void {
   let isShuttingDown = false
 
   const shutdown = async (signal: string) => {
@@ -36,13 +36,6 @@ export function bindShutdown(server: any, groupChatServer?: any, chatRunServer?:
       if (chatRunServer) {
         chatRunServer.close()
         logger.info('ChatRunSocket closed')
-      }
-
-      // Disconnect Socket.IO before HTTP server to prevent hanging
-      if (groupChatServer) {
-        groupChatServer.agentClients.disconnectAll()
-        groupChatServer.getIO().close()
-        logger.info('Socket.IO closed')
       }
 
       const servers = Array.isArray(server) ? server : [server].filter(Boolean)

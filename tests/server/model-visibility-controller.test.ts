@@ -21,6 +21,7 @@ vi.mock('fs/promises', () => ({
 vi.mock('fs', () => ({
   existsSync: mockExistsSync,
   readFileSync: mockReadFileSync,
+  mkdirSync: vi.fn(),
 }))
 
 vi.mock('../../packages/server/src/services/hermes/hermes-profile', () => ({

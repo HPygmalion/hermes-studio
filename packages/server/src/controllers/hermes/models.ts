@@ -11,7 +11,6 @@ import { readAppConfig, writeAppConfig, type ModelVisibilityRule } from '../../s
 import { getDb } from '../../db'
 import { MODEL_CONTEXT_TABLE } from '../../db/hermes/schemas'
 import { listUserProfiles } from '../../db/hermes/users-store'
-import { logger } from '../../services/logger'
 
 const PROVIDER_MODEL_CATALOG = buildProviderModelMap()
 const execFileAsync = promisify(execFile)
@@ -44,7 +43,7 @@ async function fetchOpenCodeFreeModels(): Promise<string[]> {
       return models
     }
   } catch (err) {
-    logger.warn('fetchOpenCodeFreeModels failed, falling back to static catalog: %s', (err as Error)?.message || err)
+    console.warn('fetchOpenCodeFreeModels failed, falling back to static catalog: %s', (err as Error)?.message || err)
   }
   return openCodeFreeStaticModels()
 }

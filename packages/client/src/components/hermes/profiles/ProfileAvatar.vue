@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import multiavatar from '@multiavatar/multiavatar'
 import type { ProfileAvatar } from '@/api/hermes/profiles'
+import hermesAgentAvatar from '@/assets/hermes-agent-avatar.png'
 
 const props = withDefaults(defineProps<{
   name: string
@@ -11,8 +11,6 @@ const props = withDefaults(defineProps<{
   size: 24,
 })
 
-const fallbackSeed = computed(() => props.name || 'default')
-const generatedSvg = computed(() => multiavatar(props.avatar?.seed || fallbackSeed.value))
 const style = computed(() => ({
   width: `${props.size}px`,
   height: `${props.size}px`,
@@ -29,7 +27,7 @@ const style = computed(() => ({
       alt=""
       draggable="false"
     >
-    <span v-else class="profile-avatar-svg" v-html="generatedSvg" />
+    <img v-else class="profile-avatar-image" :src="hermesAgentAvatar" alt="" draggable="false">
   </span>
 </template>
 
@@ -42,15 +40,10 @@ const style = computed(() => ({
   background: var(--bg-secondary);
 }
 
-.profile-avatar-image,
-.profile-avatar-svg,
-.profile-avatar-svg :deep(svg) {
+.profile-avatar-image {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-.profile-avatar-image {
   object-fit: cover;
 }
 </style>

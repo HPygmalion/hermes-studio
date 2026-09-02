@@ -30,7 +30,6 @@ import { kanbanRoutes } from './hermes/kanban'
 import { ttsRoutes } from './hermes/tts'
 import { mediaRoutes } from './hermes/media'
 import { proxyRoutes, proxyMiddleware } from './hermes/proxy'
-import { groupChatRoutes, setGroupChatServer } from './hermes/group-chat'
 import { performanceMonitorRoutes } from './hermes/performance-monitor'
 
 /**
@@ -66,7 +65,6 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(copilotAuthRoutes.routes())
   app.use(xaiAuthRoutes.routes())
   app.use(weixinRoutes.routes())
-  app.use(groupChatRoutes.routes())       // Must be before proxy
   app.use(fileRoutes.routes())              // Must be before proxy (proxy catch-all matches everything)
   app.use(downloadRoutes.routes())          // Must be before proxy
   app.use(jobRoutes.routes())               // Must be before proxy

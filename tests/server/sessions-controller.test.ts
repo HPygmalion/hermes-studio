@@ -20,7 +20,6 @@ const localCreateSessionMock = vi.fn()
 const localUpdateSessionMock = vi.fn()
 const localAddMessagesMock = vi.fn()
 const localUpdateSessionStatsMock = vi.fn()
-const getGroupChatServerMock = vi.fn()
 const getLocalUsageStatsMock = vi.fn()
 const getActiveProfileNameMock = vi.fn()
 const loggerWarnMock = vi.fn()
@@ -86,10 +85,6 @@ vi.mock('../../packages/server/src/db/hermes/usage-store', () => ({
   getLocalUsageStats: getLocalUsageStatsMock,
 }))
 
-vi.mock('../../packages/server/src/routes/hermes/group-chat', () => ({
-  getGroupChatServer: getGroupChatServerMock,
-}))
-
 vi.mock('../../packages/server/src/services/hermes/model-context', () => ({
   getModelContextLength: vi.fn(),
 }))
@@ -141,8 +136,6 @@ describe('session conversations controller', () => {
     localUpdateSessionMock.mockReset()
     localAddMessagesMock.mockReset()
     localUpdateSessionStatsMock.mockReset()
-    getGroupChatServerMock.mockReset()
-    getGroupChatServerMock.mockReturnValue(null)
     getLocalUsageStatsMock.mockReset()
     getActiveProfileNameMock.mockReset()
     getActiveProfileNameMock.mockReturnValue('default')

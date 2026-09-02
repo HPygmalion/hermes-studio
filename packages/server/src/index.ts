@@ -14,10 +14,9 @@ import { setupTerminalWebSocket } from './routes/hermes/terminal'
 import { setupKanbanEventsWebSocket } from './routes/hermes/kanban-events'
 import { startVersionCheck } from './routes/health'
 import { registerRoutes } from './routes'
-import { setGroupChatServer } from './routes/hermes/group-chat'
 import { setChatRunServer } from './routes/hermes/chat-run'
-import { GroupChatServer } from './services/hermes/group-chat'
 import { ChatRunSocket } from './services/hermes/run-chat'
+import { Server } from 'socket.io'
 import { startAgentBridgeManager } from './services/hermes/agent-bridge'
 import { HermesSkillInjector } from './services/hermes/skill-injector'
 import { ensureProfileGatewaysRunning } from './services/hermes/gateway-autostart'
@@ -164,12 +163,18 @@ export async function bootstrap() {
   setupKanbanEventsWebSocket(servers)
   console.log('[bootstrap] terminal + kanban websocket setup')
 
-  // Group chat Socket.IO (must be after server is created)
-  const groupChatServer = new GroupChatServer(servers)
-  setGroupChatServer(groupChatServer)
-
-  // Chat run Socket.IO — shares the same Server instance, just adds /chat-run namespace
-  chatRunServer = new ChatRunSocket(groupChatServer.getIO())
+  // Chat run Socket.IO — own Socket.IO server (group chat removed)
+  const io = new Server(servers[0], {
+    cors: { origin: '*' },
+    pingInterval: 25_000,
+    pingTimeout: 90_000,
+    connectionStateRecovery: {
+      maxDisconnectionDuration: 2 * 60_000,
+      skipMiddlewares: true,
+    },
+  })
+  servers.slice(1).forEach((httpServer) => io.attach(httpServer))
+  chatRunServer = new ChatRunSocket(io)
   setChatRunServer(chatRunServer)
   chatRunServer.init()
 
@@ -196,9 +201,6 @@ export async function bootstrap() {
   console.log(`Log: ${config.appHome}/logs/server.log`)
   logger.info('Server: http://localhost:%d (LAN: http://%s:%d)', config.port, localIp, config.port)
 
-  // Restore group chat agents after server is ready.
-  groupChatServer.restoreWhenReady()
-
   servers.forEach((httpServer) => {
     httpServer.on('error', (err: any) => {
       console.error('[bootstrap] server error:', err.code || err.message)
@@ -206,7 +208,7 @@ export async function bootstrap() {
     })
   })
 
-  bindShutdown(servers, groupChatServer, chatRunServer, agentBridgeManager)
+  bindShutdown(servers, chatRunServer, agentBridgeManager)
   startVersionCheck()
 }
 

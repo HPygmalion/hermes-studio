@@ -172,7 +172,6 @@ describe('AppSidebar search entry', () => {
       'sidebar.groupConversationShort',
       'sidebar.groupAgentShort',
       'sidebar.groupMonitoringShort',
-      'sidebar.groupToolsShort',
       'sidebar.groupSystemShort',
     ])
 

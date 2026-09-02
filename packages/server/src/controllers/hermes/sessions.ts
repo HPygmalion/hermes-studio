@@ -18,14 +18,14 @@ import type { UsageStatsModelRow, UsageStatsDailyRow } from '../../db/hermes/usa
 import { getModelContextLength } from '../../services/hermes/model-context'
 import { getActiveProfileName, listProfileNamesFromDisk } from '../../services/hermes/hermes-profile'
 import { isPathWithin } from '../../services/hermes/hermes-path'
-import { getGroupChatServer } from '../../routes/hermes/group-chat'
 import { logger } from '../../services/logger'
 import type { ConversationSummary } from '../../services/hermes/conversations'
 import { listUserProfiles } from '../../db/hermes/users-store'
 import { readConfigYamlForProfile } from '../../services/config-helpers'
 
 function getPendingDeletedSessionIds(): Set<string> {
-  return getGroupChatServer()?.getStorage().getPendingDeletedSessionIds() || new Set<string>()
+  // 群聊已移除，无待删的群聊会话
+  return new Set<string>()
 }
 
 function filterPendingDeletedSessions<T extends { id: string }>(items: T[]): T[] {

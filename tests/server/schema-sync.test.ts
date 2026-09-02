@@ -180,81 +180,7 @@ describe('Database Schema Synchronization', () => {
     })
   })
 
-  describe('Schema sync with single-column primary keys', () => {
-    it('creates table with single-column primary key', async () => {
-      const { syncTable, GC_ROOM_AGENTS_TABLE, GC_ROOM_AGENTS_SCHEMA } =
-        await import('../../packages/server/src/db/hermes/schemas')
-
-      syncTable(GC_ROOM_AGENTS_TABLE, GC_ROOM_AGENTS_SCHEMA, {
-        primaryKey: 'id',
-      })
-
-      const db = getTestDb()
-
-      // Verify table exists
-      expect(tableExists(db, GC_ROOM_AGENTS_TABLE)).toBe(true)
-
-      // Verify single-column primary key
-      const pk = getTablePrimaryKey(db, GC_ROOM_AGENTS_TABLE)
-      expect(pk).toBe('id')
-
-      // Verify all columns exist
-      const cols = getTableColumns(db, GC_ROOM_AGENTS_TABLE)
-      expect(cols.has('id')).toBe(true)
-      expect(cols.has('roomId')).toBe(true)
-      expect(cols.has('agentId')).toBe(true)
-      expect(cols.has('profile')).toBe(true)
-      expect(cols.has('name')).toBe(true)
-
-      // Verify primary key constraint works (unique id required)
-      db.prepare(`INSERT INTO "${GC_ROOM_AGENTS_TABLE}" (id, roomId, agentId, profile, name, description, invited) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-        .run('agent-1', 'room-1', 'agent-1', 'default', 'Agent 1', '', 0)
-
-      db.prepare(`INSERT INTO "${GC_ROOM_AGENTS_TABLE}" (id, roomId, agentId, profile, name, description, invited) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-        .run('agent-2', 'room-1', 'agent-2', 'default', 'Agent 2', '', 0)
-
-      // Verify both rows exist
-      const rows = db.prepare(`SELECT COUNT(*) as count FROM "${GC_ROOM_AGENTS_TABLE}"`).get() as { count: number }
-      expect(rows.count).toBe(2)
-
-      // Verify duplicate primary key is rejected
-      expect(() => {
-        db.prepare(`INSERT INTO "${GC_ROOM_AGENTS_TABLE}" (id, roomId, agentId, profile, name, description, invited) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-          .run('agent-1', 'room-1', 'agent-1', 'default', 'Agent 1 Duplicate', '', 0)
-      }).toThrow()
-    })
-  })
-
   describe('Destructive schema changes are not applied automatically', () => {
-    it('does not rebuild table when primary key differs', async () => {
-      const { syncTable, GC_ROOM_MEMBERS_TABLE, GC_ROOM_MEMBERS_SCHEMA } =
-        await import('../../packages/server/src/db/hermes/schemas')
-
-      const db = getTestDb()
-
-      // Create table with roomId as primary key and all necessary columns
-      db.exec(`CREATE TABLE "${GC_ROOM_MEMBERS_TABLE}" (roomId TEXT PRIMARY KEY, userId TEXT, userName TEXT, description TEXT DEFAULT '', joinedAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL)`)
-
-      // Insert test data
-      db.prepare(`INSERT INTO "${GC_ROOM_MEMBERS_TABLE}" (roomId, userId, userName, description, joinedAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)`)
-        .run('room-1', 'user-1', 'User 1', '', Date.now(), Date.now())
-
-      // Sync with id-based primary key schema
-      syncTable(GC_ROOM_MEMBERS_TABLE, GC_ROOM_MEMBERS_SCHEMA, {
-        primaryKey: 'id',
-      })
-
-      // Verify existing primary key was left untouched
-      const tableCols = db.prepare(`PRAGMA table_info("${GC_ROOM_MEMBERS_TABLE}")`).all() as Array<{ name: string; pk: number }>
-      expect(tableCols.find(c => c.name === 'roomId')?.pk).toBe(1)
-
-      // Verify data was preserved
-      const row = db.prepare(`SELECT * FROM "${GC_ROOM_MEMBERS_TABLE}" WHERE roomId = ? AND userId = ?`).get('room-1', 'user-1')
-      expect(row).toBeTruthy()
-      expect(row.roomId).toBe('room-1')
-      expect(row.userId).toBe('user-1')
-    })
-
     it('does not rebuild table when column types differ', async () => {
       const { syncTable, USAGE_TABLE, USAGE_SCHEMA } = await import('../../packages/server/src/db/hermes/schemas')
 
@@ -347,36 +273,6 @@ describe('Database Schema Synchronization', () => {
 
       const cols = getTableColumns(db, USAGE_TABLE)
       expect(cols.has('input_tokens')).toBe(true)
-    })
-
-    it('preserves data and existing table definition when primary key is missing', async () => {
-      const { syncTable, GC_ROOM_AGENTS_TABLE, GC_ROOM_AGENTS_SCHEMA } =
-        await import('../../packages/server/src/db/hermes/schemas')
-
-      const db = getTestDb()
-
-      // Create table without id primary key but with all columns
-      db.exec(`CREATE TABLE "${GC_ROOM_AGENTS_TABLE}" (id TEXT NOT NULL, roomId TEXT NOT NULL, agentId TEXT NOT NULL, profile TEXT NOT NULL, name TEXT NOT NULL, description TEXT DEFAULT '', invited INTEGER DEFAULT 0)`)
-
-      // Insert test data (only columns that exist)
-      db.prepare(`INSERT INTO "${GC_ROOM_AGENTS_TABLE}" (id, roomId, agentId, profile, name, description, invited) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-        .run('agent-1', 'room-1', 'agent-1', 'default', 'Test Agent', '', 0)
-
-      // Sync with id primary key expectation; should not rebuild existing table
-      syncTable(GC_ROOM_AGENTS_TABLE, GC_ROOM_AGENTS_SCHEMA, {
-        primaryKey: 'id',
-      })
-
-      expect(getTablePrimaryKey(db, GC_ROOM_AGENTS_TABLE)).toBe(null)
-
-      // Verify data was preserved
-      const row = db.prepare(`SELECT * FROM "${GC_ROOM_AGENTS_TABLE}" WHERE id = ?`)
-        .get('agent-1')
-      expect(row).toBeTruthy()
-      expect(row.id).toBe('agent-1')
-      expect(row.roomId).toBe('room-1')
-      expect(row.agentId).toBe('agent-1')
-      expect(row.name).toBe('Test Agent')
     })
   })
 

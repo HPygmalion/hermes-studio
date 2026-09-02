@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { NButton, NModal, useMessage } from "naive-ui";
+import { NButton, useMessage } from "naive-ui";
 import { useAppStore } from "@/stores/hermes/app";
 import ModelSelector from "./ModelSelector.vue";
 import ProfileSelector from "./ProfileSelector.vue";
@@ -11,9 +11,7 @@ import ThemeSwitch from "./ThemeSwitch.vue";
 import { useSessionSearch } from '@/composables/useSessionSearch'
 import { usePersistentRecord } from '@/composables/usePersistentRecord'
 import RouteLinkItem from '@/components/common/RouteLinkItem.vue'
-import { changelog } from "@/data/changelog";
 import { isStoredSuperAdmin } from "@/api/client";
-
 const { t } = useI18n();
 const message = useMessage();
 const route = useRoute();
@@ -23,7 +21,6 @@ const { openSessionSearch } = useSessionSearch();
 const selectedKey = computed(() => {
   if (route.name === "hermes.session") return "hermes.chat";
   if (route.name === "hermes.historySession") return "hermes.history";
-  if (route.name === "hermes.groupChatRoom") return "hermes.groupChat";
   return route.name as string;
 });
 const isSuperAdmin = computed(() => isStoredSuperAdmin());
@@ -69,12 +66,6 @@ function handleLogout() {
   router.replace({ name: 'login' });
 }
 
-// Changelog
-const showChangelog = ref(false);
-
-function openChangelog() {
-  showChangelog.value = true;
-}
 </script>
 
 <template>
@@ -114,15 +105,6 @@ function openChangelog() {
               <polyline points="12 6 12 12 16 14" />
             </svg>
             <span>{{ t("sidebar.history") }}</span>
-          </RouteLinkItem>
-          <RouteLinkItem class="nav-item" :to="{ name: 'hermes.groupChat' }" :active="isNavActive('hermes.groupChat', 'hermes.groupChatRoom')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            <span>{{ t("sidebar.groupChat") }}<span class="beta-tag">(beta)</span></span>
           </RouteLinkItem>
           <button class="nav-item" @click="openSessionSearch">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -315,7 +297,7 @@ function openChangelog() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
           </a>
         </div>
-        <span class="version-text" @click="openChangelog">Hermes Studio LTS</span>
+        <span class="version-text">Hermes Studio LTS</span>
         <ThemeSwitch />
       </div>
       <NButton v-if="appStore.clientOutdated" type="warning" size="tiny" block class="update-btn" @click="handleReloadClient">
@@ -326,22 +308,8 @@ function openChangelog() {
       </NButton>
     </div>
 
-    <!-- Changelog modal -->
-    <NModal v-model:show="showChangelog" preset="dialog" :title="t('sidebar.changelog')" style="width: 520px;">
-      <div class="changelog-list">
-        <div v-for="entry in changelog" :key="entry.version" class="changelog-version-block">
-          <div class="changelog-version-header">
-            <span class="changelog-version-tag">v{{ entry.version }}</span>
-            <span class="changelog-date">{{ entry.date }}</span>
-          </div>
-          <ul class="changelog-changes">
-            <li v-for="(change, idx) in entry.changes" :key="idx">{{ t(change) }}</li>
-          </ul>
-        </div>
-      </div>
-    </NModal>
   </aside>
-</template>
+ </template>
 
 <style scoped lang="scss">
 @use "@/styles/variables" as *;
@@ -609,57 +577,6 @@ function openChangelog() {
 
   &:hover {
     color: $accent-primary;
-  }
-}
-
-.changelog-list {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.changelog-version-block {
-  margin-bottom: 20px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.changelog-version-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.changelog-version-tag {
-  font-weight: 600;
-  font-size: 14px;
-  color: $text-primary;
-  font-family: $font-code;
-}
-
-.changelog-changes {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-
-  li {
-    font-size: 13px;
-    color: $text-secondary;
-    padding: 4px 0 4px 16px;
-    position: relative;
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 12px;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: $text-muted;
-    }
   }
 }
 

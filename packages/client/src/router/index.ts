@@ -88,29 +88,9 @@ const router = createRouter({
       component: () => import('@/views/hermes/MemoryView.vue'),
     },
     {
-      path: '/hermes/settings',
-      name: 'hermes.settings',
-      component: () => import('@/views/hermes/SettingsView.vue'),
-    },
-    {
-      path: '/hermes/channels',
-      name: 'hermes.channels',
-      component: () => import('@/views/hermes/ChannelsView.vue'),
-    },
-    {
       path: '/hermes/terminal',
       name: 'hermes.terminal',
       component: () => import('@/views/hermes/TerminalView.vue'),
-    },
-    {
-      path: '/hermes/group-chat',
-      name: 'hermes.groupChat',
-      component: () => import('@/views/hermes/GroupChatView.vue'),
-    },
-    {
-      path: '/hermes/group-chat/room/:roomId',
-      name: 'hermes.groupChatRoom',
-      component: () => import('@/views/hermes/GroupChatView.vue'),
     },
     {
       path: '/hermes/files',
