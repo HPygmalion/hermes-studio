@@ -36,13 +36,18 @@
 
 ## 本地改动
 
-相对上游 **v0.6.4** 的定制（去广告 / 精简 / 适配）：
+相对上游 **v0.6.4** 的定制（去广告 / 精简 / 定位为纯粹 Hermes WebUI）：
 
 ### 移除推广与冗余
 - 移除侧栏「中转站 / API Relay」推广入口及其 `apikey.fun/register?aff=LIBAPI` 外链；
 - 移除模型管理里的 `apikey.fun` 引流链接；
 - 移除 `packages/website`（官网营销站）及其构建配置；
 - 移除侧栏「工具」空分组（原「版本预览」占位入口）。
+
+### 移除 Studio 独有 / 非 Hermes 定位的功能
+- **整块移除「群聊」**（beta）：侧栏入口、路由、客户端 store / 组件 / 视图 / i18n，
+  服务端路由 / 服务 / 数据库表，并将聊天 Socket.IO 从 `GroupChatServer` 解耦（改用独立 `Server`）；
+- 移除侧栏「工具 / 版本预览」占位入口。
 
 ### 适配 OpenCode Free（关键）
 - 在 `PROVIDER_ENV_MAP` / `PROVIDER_PRESETS` / `buildAvailableForProfile` 中新增
@@ -53,7 +58,8 @@
 ### 其他定制
 - `check_for_updates` 默认关闭（不再轮询上游仓库）；
 - `bot_name` 默认 `Hermes Studio`；
-- 侧栏底部品牌：显示 **Hermes Studio LTS**，两个链接指向本仓库；
+- **默认头像**：改用 hermes-agent 官方图标（替换随机 `multiavatar` 人像）；
+- **左下角品牌**：`Hermes Studio LTS` 纯文字（不再点击弹出更新日志，不指向任何仓库链接/版本号）；
 - `TZ=Asia/Shanghai`；默认 `PORT=6060`；双栈监听（`BIND_HOST=::`）。
 
 ---
