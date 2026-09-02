@@ -1,6 +1,8 @@
 import { readFile } from 'fs/promises'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
+import { promisify } from 'util'
+import { execFile } from 'child_process'
 import { getActiveEnvPath, getActiveAuthPath, getActiveProfileName, getProfileDir, listProfileNamesFromDisk } from '../../services/hermes/hermes-profile'
 import { readConfigYaml, readConfigYamlForProfile, updateConfigYaml, updateConfigYamlForProfile, fetchProviderModels, buildModelGroups, PROVIDER_ENV_MAP } from '../../services/config-helpers'
 import { buildProviderModelMap, PROVIDER_PRESETS } from '../../shared/providers'
@@ -9,8 +11,43 @@ import { readAppConfig, writeAppConfig, type ModelVisibilityRule } from '../../s
 import { getDb } from '../../db'
 import { MODEL_CONTEXT_TABLE } from '../../db/hermes/schemas'
 import { listUserProfiles } from '../../db/hermes/users-store'
+import { logger } from '../../services/logger'
 
 const PROVIDER_MODEL_CATALOG = buildProviderModelMap()
+const execFileAsync = promisify(execFile)
+
+// OpenCode Free (keyless) — 实时拉取 agent 判定的匿名免费模型清单, 带进程内缓存。
+// agent 侧 provider_model_ids("opencode-free") 会实时 revalidate /zen/v1/models 并过滤到免费层。
+const OPENCODE_FREE_CACHE_TTL_MS = 5 * 60 * 1000
+let openCodeFreeCache: { at: number; models: string[] } | null = null
+
+function openCodeFreeStaticModels(): string[] {
+  return PROVIDER_MODEL_CATALOG['opencode-free'] || []
+}
+
+async function fetchOpenCodeFreeModels(): Promise<string[]> {
+  if (openCodeFreeCache && (Date.now() - openCodeFreeCache.at) < OPENCODE_FREE_CACHE_TTL_MS) {
+    return openCodeFreeCache.models
+  }
+  const binDir = join((process.env.HERMES_BIN || '/opt/hermes/.venv/bin/hermes'), '..') // <venv>/bin
+  const venvPython = join(binDir, 'python3')
+  const script = 'import hermes_cli.models as m; import json; print(json.dumps(m.provider_model_ids("opencode-free")))'
+  try {
+    const { stdout } = await execFileAsync(venvPython, ['-c', script], {
+      timeout: 15000,
+      env: { ...process.env },
+    })
+    const parsed = JSON.parse(stdout.trim())
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const models = parsed.filter((x: unknown): x is string => typeof x === 'string' && x.length > 0)
+      openCodeFreeCache = { at: Date.now(), models }
+      return models
+    }
+  } catch (err) {
+    logger.warn('fetchOpenCodeFreeModels failed, falling back to static catalog: %s', (err as Error)?.message || err)
+  }
+  return openCodeFreeStaticModels()
+}
 
 type ModelMeta = { preview?: boolean; disabled?: boolean; alias?: string }
 type AvailableGroup = { provider: string; label: string; base_url: string; models: string[]; api_key: string; builtin?: boolean; model_meta?: Record<string, ModelMeta>; available_models?: string[]; base_url_env?: string }
@@ -373,6 +410,9 @@ async function buildAvailableForProfile(
         }
         if (Object.keys(modelMeta).length === 0) modelMeta = undefined
       }
+    } else if (providerKey === 'opencode-free') {
+      // OpenCode Free (keyless) — 实时感知 agent 判定的免费模型清单
+      modelsList = await fetchOpenCodeFreeModels()
     } else if (providerShouldFetchLiveModels(providerKey)) {
       if (envMapping.api_key_env) {
         const apiKey = envGetValue(envMapping.api_key_env)
