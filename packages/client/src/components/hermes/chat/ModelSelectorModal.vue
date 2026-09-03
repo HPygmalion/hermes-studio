@@ -28,11 +28,9 @@ const currentProvider = computed(() => chatStore.activeSession?.provider || appS
 // 模型组：当前会话实际使用的模型（appStore.modelGroups 已按 profile 组装）
 const modelGroups = computed<AvailableModelGroup[]>(() => appStore.modelGroups || [])
 
-const providerOptions = computed(() => {
-  const current = currentProvider.value
-  customProvider.value = current
-  return modelGroups.value.map(g => ({ label: g.label || g.provider, value: g.provider }))
-})
+const providerOptions = computed(() =>
+  modelGroups.value.map(g => ({ label: g.label || g.provider, value: g.provider })),
+)
 
 const modelGroupsWithCustom = computed(() =>
   modelGroups.value.map(g => ({
