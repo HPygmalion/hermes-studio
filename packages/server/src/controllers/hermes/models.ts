@@ -24,8 +24,8 @@ function openCodeFreeStaticModels(): string[] {
   return PROVIDER_MODEL_CATALOG['opencode-free'] || []
 }
 
-async function fetchOpenCodeFreeModels(): Promise<string[]> {
-  if (openCodeFreeCache && (Date.now() - openCodeFreeCache.at) < OPENCODE_FREE_CACHE_TTL_MS) {
+async function fetchOpenCodeFreeModels(force = false): Promise<string[]> {
+  if (!force && openCodeFreeCache && (Date.now() - openCodeFreeCache.at) < OPENCODE_FREE_CACHE_TTL_MS) {
     return openCodeFreeCache.models
   }
   const binDir = join((process.env.HERMES_BIN || '/opt/hermes/.venv/bin/hermes'), '..') // <venv>/bin
@@ -306,6 +306,7 @@ async function buildAvailableForProfile(
   profile: string,
   fetchCache: ProviderFetchCache,
   appConfig: Awaited<ReturnType<typeof readAppConfig>>,
+  force = false,
 ): Promise<{
   profile: string
   default: string
@@ -411,7 +412,7 @@ async function buildAvailableForProfile(
       }
     } else if (providerKey === 'opencode-free') {
       // OpenCode Free (keyless) — 实时感知 agent 判定的免费模型清单
-      modelsList = await fetchOpenCodeFreeModels()
+      modelsList = await fetchOpenCodeFreeModels(force)
     } else if (providerShouldFetchLiveModels(providerKey)) {
       if (envMapping.api_key_env) {
         const apiKey = envGetValue(envMapping.api_key_env)
@@ -473,6 +474,7 @@ async function buildAvailableForProfile(
 
 export async function getAvailable(ctx: any) {
   try {
+    const forceRefresh = ctx.query?.force === 'true' || ctx.query?.force === true
     const requestedProfile = requestedProfileName(ctx)
     if (!requestedProfile) {
       const appConfig = await readAppConfig()
@@ -482,7 +484,7 @@ export async function getAvailable(ctx: any) {
       const fetchCache: ProviderFetchCache = new Map()
       const visibleProfiles = visibleProfileNamesForUser(ctx)
       const profileResults = await Promise.all(
-        visibleProfiles.map(profile => buildAvailableForProfile(profile, fetchCache, appConfig)),
+        visibleProfiles.map(profile => buildAvailableForProfile(profile, fetchCache, appConfig, forceRefresh)),
       )
       const mergedGroups = mergeAvailableGroups(profileResults.flatMap(result => result.groups))
       const groupsWithAliases = applyModelAliases(mergedGroups, modelAliases)
@@ -519,7 +521,7 @@ export async function getAvailable(ctx: any) {
     const modelAliasesForProfile = normalizeAliases(appConfigForProfile.modelAliases)
     const modelVisibilityForProfile = normalizeModelVisibility(appConfigForProfile.modelVisibility)
     const customModelsForProfile = normalizeCustomModels(appConfigForProfile.customModels)
-    const profileResult = await buildAvailableForProfile(requestedProfile, new Map(), appConfigForProfile)
+    const profileResult = await buildAvailableForProfile(requestedProfile, new Map(), appConfigForProfile, forceRefresh)
     const profileGroupsWithAliases = applyModelAliases(profileResult.groups, modelAliasesForProfile)
     const visibleProfileGroups = applyModelVisibility(profileGroupsWithAliases, modelVisibilityForProfile)
     const visibleProfileDefault = resolveVisibleDefault(profileResult.default, profileResult.default_provider, visibleProfileGroups)

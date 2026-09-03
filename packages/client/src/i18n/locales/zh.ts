@@ -103,6 +103,7 @@ export default {
     collapse: '收起',
     start: '启动',
     stop: '停止',
+    refresh: '刷新',
   },
 
   // 侧边栏

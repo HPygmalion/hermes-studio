@@ -46,6 +46,11 @@ const router = createRouter({
       component: () => import('@/views/hermes/ModelsView.vue'),
     },
     {
+      path: '/hermes/settings',
+      name: 'hermes.settings',
+      component: () => import('@/views/hermes/SettingsView.vue'),
+    },
+    {
       path: '/hermes/profiles',
       name: 'hermes.profiles',
       component: () => import('@/views/hermes/ProfilesView.vue'),

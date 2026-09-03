@@ -78,7 +78,7 @@ describe('Models Store', () => {
       model: 'deepseek-v4-flash',
     })
 
-    expect(mockSystemApi.fetchAvailableModelsForProfile).toHaveBeenCalledWith('default')
+    expect(mockSystemApi.fetchAvailableModelsForProfile).toHaveBeenCalledWith('default', expect.anything())
     expect(mockSystemApi.fetchAvailableModels).toHaveBeenCalled()
     expect(modelsStore.providers[0].models).toEqual(['deepseek-v4-flash', 'deepseek-v4-pro'])
     expect(appStore.modelGroups[0].models).toEqual(['deepseek-v4-flash', 'deepseek-v4-pro'])

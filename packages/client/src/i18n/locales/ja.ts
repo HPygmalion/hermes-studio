@@ -103,6 +103,7 @@ export default {
     stop: '停止',
     start: '開始',
     expired: '期限切れ',
+    refresh: '更新',
   },
 
   // サイドバー

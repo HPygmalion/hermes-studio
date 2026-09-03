@@ -103,6 +103,7 @@ export default {
     stop: 'Detener',
     start: 'Iniciar',
     expired: 'Expirado',
+    refresh: 'Actualizar',
   },
 
   // Sidebar

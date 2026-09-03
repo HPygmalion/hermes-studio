@@ -103,6 +103,7 @@ export default {
     stop: '중지',
     start: '시작',
     expired: '만료됨',
+    refresh: '새로고침',
   },
 
   // 사이드바

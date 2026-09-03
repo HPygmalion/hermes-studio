@@ -103,6 +103,7 @@ export default {
     collapse: 'Collapse',
     start: 'Start',
     stop: 'Stop',
+    refresh: 'Refresh',
   },
 
   // Sidebar

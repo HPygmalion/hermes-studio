@@ -33,12 +33,12 @@ export const useModelsStore = defineStore('models', () => {
     ),
   )
 
-  async function fetchProviders() {
+  async function fetchProviders(force = false) {
     if (!hasApiKey()) return
     loading.value = true
     try {
       const profile = useProfilesStore().activeProfileName || 'default'
-      const res = await systemApi.fetchAvailableModelsForProfile(profile)
+      const res = await systemApi.fetchAvailableModelsForProfile(profile, force)
       providers.value = res.groups
       allProviders.value = res.allProviders
       defaultModel.value = res.default
