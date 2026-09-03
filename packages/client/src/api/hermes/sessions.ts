@@ -6,6 +6,7 @@ export interface SessionSummary {
   source: string
   model: string
   provider?: string
+  reasoning_effort?: string
   title: string | null
   preview?: string
   started_at: number
@@ -219,6 +220,18 @@ export async function setSessionModel(id: string, model: string, provider: strin
     await request(`/api/hermes/sessions/${id}/model`, {
       method: 'POST',
       body: JSON.stringify({ model, provider }),
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function setSessionReasoningEffort(id: string, reasoningEffort: string): Promise<boolean> {
+  try {
+    await request(`/api/hermes/sessions/${id}/reasoning-effort`, {
+      method: 'POST',
+      body: JSON.stringify({ reasoningEffort }),
     })
     return true
   } catch {

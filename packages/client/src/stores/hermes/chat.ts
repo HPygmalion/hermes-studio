@@ -1,5 +1,5 @@
 import { startRunViaSocket, resumeSession, registerSessionHandlers, unregisterSessionHandlers, getChatRunSocket, respondToolApproval, onPeerUserMessage, onSessionCommand, respondClarify, type RunEvent, type ResumeSessionPayload, type ContentBlock as ContentBlockImport } from '@/api/hermes/chat'
-import { deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, setSessionModel, type HermesMessage, type SessionSummary } from '@/api/hermes/sessions'
+import { deleteSession as deleteSessionApi, fetchSessionMessagesPage, fetchSessions, setSessionModel, setSessionReasoningEffort as setSessionReasoningEffortApi, type HermesMessage, type SessionSummary } from '@/api/hermes/sessions'
 import { getActiveProfileName } from '@/api/client'
 import { getDownloadUrl } from '@/api/hermes/download'
 import { defineStore } from 'pinia'
@@ -76,6 +76,7 @@ export interface Session {
   updatedAt: number
   model?: string
   provider?: string
+  reasoningEffort?: string
   messageCount?: number
   messageTotal?: number
   loadedMessageCount?: number
@@ -284,6 +285,7 @@ function mapHermesSession(s: SessionSummary): Session {
     updatedAt: Math.round((s.last_active || s.ended_at || s.started_at) * 1000),
     model: s.model,
     provider: s.provider || (s as any).billing_provider || '',
+    reasoningEffort: (s as any).reasoning_effort || undefined,
     messageCount: s.message_count,
     messageTotal: s.message_count,
     loadedMessageCount: 0,
@@ -799,6 +801,21 @@ export const useChatStore = defineStore('chat', () => {
       activeSession.value.model = modelId
       activeSession.value.provider = provider || ''
     }
+    return true
+  }
+
+  const reasoningEffortWriteChains = new Map<string, Promise<boolean>>()
+  async function setSessionReasoningEffort(reasoningEffort: string, sessionId?: string): Promise<boolean> {
+    const targetId = sessionId || activeSession.value?.id
+    if (!targetId) return false
+    const prev = reasoningEffortWriteChains.get(targetId) || Promise.resolve(true)
+    const next = prev.then(() => setSessionReasoningEffortApi(targetId, reasoningEffort))
+    reasoningEffortWriteChains.set(targetId, next)
+    const ok = await next
+    if (!ok) return false
+    const target = sessions.value.find(s => s.id === targetId)
+    if (target) target.reasoningEffort = reasoningEffort
+    if (activeSession.value?.id === targetId) activeSession.value.reasoningEffort = reasoningEffort
     return true
   }
 
@@ -2674,6 +2691,7 @@ export const useChatStore = defineStore('chat', () => {
     switchSession,
     loadOlderMessages,
     switchSessionModel,
+    setSessionReasoningEffort,
     addOrUpdateSession,
     clearProviderFromSessions,
     deleteSession,

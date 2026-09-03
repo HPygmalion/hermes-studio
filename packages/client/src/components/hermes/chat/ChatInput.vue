@@ -5,7 +5,8 @@ import { useAppStore } from '@/stores/hermes/app'
 import { useProfilesStore } from '@/stores/hermes/profiles'
 import { fetchContextLength } from '@/api/hermes/sessions'
 import { setModelContext } from '@/api/hermes/model-context'
-import { NButton, NTooltip, NSwitch, NModal, NInputNumber, useMessage } from 'naive-ui'
+import { NButton, NTooltip, NSwitch, NModal, NInput, NInputNumber, NPopover, useMessage } from 'naive-ui'
+import type { DropdownOption } from 'naive-ui'
 import { computed, ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
@@ -109,6 +110,41 @@ watch(autoPlaySpeech, (value) => {
 })
 
 const canSend = computed(() => inputText.value.trim() || attachments.value.length > 0)
+
+// --- Composer model switcher ---
+const showModelPicker = ref(false)
+const modelPickerSearch = ref('')
+const activeSessionModel = computed(() => chatStore.activeSession?.model || appStore.selectedModel || '')
+const activeSessionProvider = computed(() => chatStore.activeSession?.provider || appStore.selectedProvider || '')
+const compactModelLabel = computed(() => (
+  activeSessionModel.value ? appStore.displayModelName(activeSessionModel.value, activeSessionProvider.value) : t('models.selectModel')
+))
+const composerModelGroups = computed(() => {
+  const q = modelPickerSearch.value.trim().toLowerCase()
+  const groups = appStore.modelGroups || []
+  if (!q) return groups
+  return groups.map(g => ({
+    ...g,
+    models: (g.models || []).filter(m => m.toLowerCase().includes(q)),
+  })).filter(g => g.models.length > 0)
+})
+function openModelPicker() { modelPickerSearch.value = ''; showModelPicker.value = true }
+function composerSelectModel(model: string, provider: string) {
+  showModelPicker.value = false
+  void chatStore.switchSessionModel(model, provider)
+}
+
+// --- Reasoning effort selector ---
+const reasoningEffortOptions: DropdownOption[] = [
+  { label: t('chat.reasoningEffortNone'), key: '' },
+  { label: t('chat.reasoningEffortLow'), key: 'low' },
+  { label: t('chat.reasoningEffortMedium'), key: 'medium' },
+  { label: t('chat.reasoningEffortHigh'), key: 'high' },
+]
+const activeSessionReasoningEffort = computed(() => chatStore.activeSession?.reasoningEffort || '')
+async function onReasoningEffortChange(key: string) {
+  void chatStore.setSessionReasoningEffort(key)
+}
 
 function scrollCommandIntoView() {
   nextTick(() => {
@@ -606,6 +642,37 @@ function isImage(type: string): boolean {
         </div>
       </Transition>
       <div class="input-actions">
+        <NPopover trigger="click" placement="top-start" :style="{ padding: 0 }">
+          <template #trigger>
+            <NButton size="small" quaternary @click="openModelPicker" class="composer-model-btn">
+              <template #icon>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
+              </template>
+              <span class="input-composer-model">{{ compactModelLabel }}</span>
+            </NButton>
+          </template>
+        </NPopover>
+        <NPopover trigger="click" placement="top-start">
+          <template #trigger>
+            <NButton size="small" quaternary :class="{ 'reasoning-active': activeSessionReasoningEffort }">
+              <template #icon>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+              </template>
+              <span class="input-composer-reasoning">{{ t(activeSessionReasoningEffort ? `chat.reasoningEffort${activeSessionReasoningEffort}` : 'chat.reasoningEffortAuto') }}</span>
+            </NButton>
+          </template>
+          <div class="reasoning-effort-menu">
+            <div
+              v-for="opt in reasoningEffortOptions"
+              :key="opt.key"
+              class="reasoning-effort-item"
+              :class="{ active: activeSessionReasoningEffort === opt.key }"
+              @click="onReasoningEffortChange(String(opt.key))"
+            >
+              {{ opt.label }}
+            </div>
+          </div>
+        </NPopover>
         <NButton
           v-if="chatStore.isStreaming"
           size="small"
@@ -669,8 +736,40 @@ function isImage(type: string): boolean {
         </div>
       </template>
     </NModal>
+
+    <!-- Composer model picker -->
+    <NModal
+      v-model:show="showModelPicker"
+      preset="card"
+      :title="t('models.selectModel')"
+      :style="{ width: 'min(480px, calc(100vw - 32px))' }"
+      :mask-closable="true"
+    >
+      <NInput
+        v-model:value="modelPickerSearch"
+        :placeholder="t('models.searchPlaceholder')"
+        clearable
+        size="small"
+        class="composer-model-search"
+      />
+      <div class="composer-model-list">
+        <div v-for="group in composerModelGroups" :key="group.provider" class="composer-model-group">
+          <div class="composer-model-provider">{{ group.label || group.provider }}</div>
+          <div
+            v-for="model in group.models"
+            :key="model"
+            class="composer-model-item"
+            :class="{ active: activeSessionModel === model && activeSessionProvider === group.provider }"
+            @click="composerSelectModel(model, group.provider)"
+          >
+            {{ appStore.displayModelName(model, group.provider) }}
+          </div>
+        </div>
+        <div v-if="composerModelGroups.length === 0" class="composer-model-empty">{{ t('models.noModels') }}</div>
+      </div>
+    </NModal>
   </div>
-</template>
+ </template>
 
 <style scoped lang="scss">
 @use '@/styles/variables' as *;

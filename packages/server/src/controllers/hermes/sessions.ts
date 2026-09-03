@@ -686,6 +686,24 @@ export async function setModel(ctx: any) {
   ctx.body = { ok: true }
 }
 
+export async function setReasoningEffort(ctx: any) {
+  const { reasoningEffort } = ctx.request.body as { reasoningEffort?: string }
+  if (reasoningEffort !== undefined && reasoningEffort !== null && typeof reasoningEffort !== 'string') {
+    ctx.status = 400
+    ctx.body = { error: 'reasoningEffort must be a string' }
+    return
+  }
+  const { updateSession, getSession, createSession } = await import('../../db/hermes/session-store')
+  const id = ctx.params.id
+  const existing = getSession(id)
+  if (denySessionAccess(ctx, existing)) return
+  if (!existing) {
+    createSession({ id, profile: requestedProfile(ctx) || 'default', title: '' })
+  }
+  updateSession(id, { reasoning_effort: (reasoningEffort || '').trim() } as any)
+  ctx.body = { ok: true }
+}
+
 export async function contextLength(ctx: any) {
   const profile = requestedProfile(ctx)
   const model = typeof ctx.query.model === 'string' ? ctx.query.model : undefined

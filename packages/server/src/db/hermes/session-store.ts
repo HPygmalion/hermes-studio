@@ -14,6 +14,7 @@ export interface HermesSessionRow {
   user_id: string | null
   model: string
   provider: string
+  reasoning_effort: string
   title: string | null
   started_at: number
   ended_at: number | null
@@ -88,6 +89,7 @@ function mapSessionRow(row: Record<string, unknown>): HermesSessionRow {
     user_id: row.user_id != null ? String(row.user_id) : null,
     model: String(row.model || ''),
     provider: String(row.provider || ''),
+    reasoning_effort: String((row as any).reasoning_effort || ''),
     title,
     started_at: Number(row.started_at || 0),
     ended_at: row.ended_at != null ? Number(row.ended_at) : null,
@@ -135,6 +137,7 @@ export function createSession(data: {
   source?: string
   model?: string
   provider?: string
+  reasoning_effort?: string
   title?: string
   workspace?: string
 }): HermesSessionRow {
@@ -143,7 +146,7 @@ export function createSession(data: {
   if (!isSqliteAvailable()) {
     return {
       id: data.id, profile: data.profile || 'default', source,
-      user_id: null, model: data.model || '', provider: data.provider || '', title: data.title || null,
+      user_id: null, model: data.model || '', provider: data.provider || '', reasoning_effort: data.reasoning_effort || '', title: data.title || null,
       started_at: now, ended_at: null, end_reason: null,
       message_count: 0, tool_call_count: 0,
       input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, reasoning_tokens: 0,
