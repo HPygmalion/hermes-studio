@@ -9,6 +9,7 @@ import { NButton, NTooltip, NSwitch, NModal, NInputNumber, NPopover, NSelect, us
 import { computed, ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
+import ModelSelectorModal from './ModelSelectorModal.vue'
 
 const chatStore = useChatStore()
 const appStore = useAppStore()
@@ -110,38 +111,13 @@ watch(autoPlaySpeech, (value) => {
 
 const canSend = computed(() => inputText.value.trim() || attachments.value.length > 0)
 
-// --- Composer model switcher (Naive NSelect with provider groups) ---
+// --- Composer model switcher (ModelSelectorModal, session-scoped) ---
 const activeSessionModel = computed(() => chatStore.activeSession?.model || appStore.selectedModel || '')
 const activeSessionProvider = computed(() => chatStore.activeSession?.provider || appStore.selectedProvider || '')
 const compactModelLabel = computed(() => (
   activeSessionModel.value ? appStore.displayModelName(activeSessionModel.value, activeSessionProvider.value) : t('models.selectModel')
 ))
-const composerModelGroups = computed(() => appStore.modelGroups || [])
-const composerModelOptions = computed(() =>
-  composerModelGroups.value.map(group => ({
-    type: 'group' as const,
-    label: group.label || group.provider,
-    key: group.provider,
-    children: (group.models || []).map(model => ({
-      label: appStore.displayModelName(model, group.provider),
-      value: `${group.provider}::${model}`,
-    })),
-  })),
-)
-function composerModelValue(): string | null {
-  return activeSessionModel.value && activeSessionProvider.value
-    ? `${activeSessionProvider.value}::${activeSessionModel.value}`
-    : null
-}
-function composerSelectModel(value: string | number | Array<string | number> | null) {
-  const raw = typeof value === 'string' ? value : ''
-  const idx = raw.indexOf('::')
-  if (idx < 0) return
-  const provider = raw.slice(0, idx)
-  const model = raw.slice(idx + 2)
-  if (!provider || !model) return
-  void chatStore.switchSessionModel(model, provider)
-}
+const showModelModal = ref(false)
 
 // --- Reasoning effort selector (Naive NSelect) ---
 const reasoningEffortOptions = [
@@ -656,25 +632,13 @@ function isImage(type: string): boolean {
         </div>
       </Transition>
       <div class="input-actions">
-        <NPopover trigger="click" placement="top-start" :show-arrow="false" :style="{ padding: '6px', width: '280px' }">
-          <template #trigger>
-            <NButton size="small" quaternary class="composer-model-btn">
-              <template #icon>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
-              </template>
-              <span class="input-composer-model">{{ compactModelLabel }}</span>
-            </NButton>
+        <NButton size="small" quaternary class="composer-model-btn" @click="showModelModal = true">
+          <template #icon>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
           </template>
-          <NSelect
-            :value="composerModelValue()"
-            :options="composerModelOptions"
-            filterable
-            size="small"
-            placeholder="选择模型"
-            :show-checkmark="false"
-            @update:value="composerSelectModel"
-          />
-        </NPopover>
+          <span class="input-composer-model">{{ compactModelLabel }}</span>
+        </NButton>
+        <ModelSelectorModal :show="showModelModal" @update:show="showModelModal = $event" />
         <NPopover trigger="click" placement="top-start" :show-arrow="false" :style="{ padding: '6px', width: '200px' }">
           <template #trigger>
             <NButton size="small" quaternary class="composer-reasoning-btn" :class="{ 'reasoning-active': activeSessionReasoningEffort !== 'auto' }">
