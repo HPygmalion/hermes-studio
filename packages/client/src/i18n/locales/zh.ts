@@ -103,7 +103,6 @@ export default {
     collapse: '收起',
     start: '启动',
     stop: '停止',
-    refresh: '刷新',
   },
 
   // 侧边栏
@@ -733,6 +732,12 @@ export default {
     unexpectedFormat: '响应格式异常',
     foundModels: '找到 {count} 个模型',
     fetchFailed: '获取模型失败',
+    refreshModels: '刷新',
+    refreshModelsConfirmTitle: '模型列表有变更',
+    refreshModelsConfirmContent: '刷新会移除 {removed} 个模型、新增 {added} 个。被移除的：{removedList}',
+    refreshModelsConfirmAction: '替换模型列表',
+    refreshModelsSuccess: '模型列表已更新（{count} 个模型，{unavailable} 个不可用）',
+    refreshModelsFailed: '刷新供应商模型失败',
   },
 
   // 配置

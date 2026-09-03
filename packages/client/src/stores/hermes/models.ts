@@ -33,12 +33,12 @@ export const useModelsStore = defineStore('models', () => {
     ),
   )
 
-  async function fetchProviders(force = false) {
+  async function fetchProviders() {
     if (!hasApiKey()) return
     loading.value = true
     try {
       const profile = useProfilesStore().activeProfileName || 'default'
-      const res = await systemApi.fetchAvailableModelsForProfile(profile, force)
+      const res = await systemApi.fetchAvailableModelsForProfile(profile)
       providers.value = res.groups
       allProviders.value = res.allProviders
       defaultModel.value = res.default
@@ -70,6 +70,15 @@ export const useModelsStore = defineStore('models', () => {
     await useAppStore().reloadModels()
   }
 
+  async function refreshProviderModels(provider: string) {
+    const result = await systemApi.refreshProviderModels(provider)
+    if (result.applied) {
+      await fetchProviders()
+      await useAppStore().reloadModels()
+    }
+    return result
+  }
+
   return {
     providers,
     allProviders,
@@ -83,5 +92,6 @@ export const useModelsStore = defineStore('models', () => {
     setDefaultModel,
     addProvider,
     removeProvider,
+    refreshProviderModels,
   }
 })

@@ -156,6 +156,60 @@ async function handleDelete() {
     },
   })
 }
+
+const canRefresh = computed(() =>
+  props.provider.provider === 'opencode-free'
+  || props.provider.provider === 'openrouter'
+  || isCustom.value
+)
+const refreshingModels = ref(false)
+
+async function applyRefreshResult() {
+  // 不写死持久化；仅刷新界面显示，保持自动更新语义。
+  await modelsStore.fetchProviders()
+  await appStore.reloadModels()
+}
+
+async function handleRefreshModels() {
+  if (refreshingModels.value) return
+  refreshingModels.value = true
+  try {
+    const result = await modelsStore.refreshProviderModels(props.provider.provider)
+    if (result.requires_confirmation && result.diff.removed.length > 0) {
+      dialog.warning({
+        title: t('models.refreshModelsConfirmTitle'),
+        content: t('models.refreshModelsConfirmContent', {
+          removed: result.diff.removed.length,
+          added: result.diff.added.length,
+          removedList: result.diff.removed.slice(0, 8).join(', ') || '-',
+        }),
+        positiveText: t('models.refreshModelsConfirmAction'),
+        negativeText: t('common.cancel'),
+        onPositiveClick: async () => {
+          await applyRefreshResult()
+          message.success(t('models.refreshModelsSuccess', {
+            count: result.models.length,
+            unavailable: result.diff.removed.length,
+          }))
+        },
+      })
+      return
+    }
+    if (result.applied) {
+      await applyRefreshResult()
+      message.success(t('models.refreshModelsSuccess', {
+        count: result.models.length,
+        unavailable: result.diff.removed.length,
+      }))
+    } else {
+      message.error(t('models.refreshModelsFailed'))
+    }
+  } catch (e: any) {
+    message.error(e?.message || t('models.refreshModelsFailed'))
+  } finally {
+    refreshingModels.value = false
+  }
+}
 </script>
 
 <template>
@@ -206,6 +260,12 @@ async function handleDelete() {
     </div>
 
     <div class="card-actions">
+      <NButton v-if="canRefresh" size="tiny" quaternary :loading="refreshingModels" @click="handleRefreshModels">
+        <template #icon>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </template>
+        {{ t('models.refreshModels') }}
+      </NButton>
       <NButton size="tiny" quaternary @click="showAliasListModal = true">{{ t('models.aliasManage') }}</NButton>
       <NButton size="tiny" quaternary @click="openVisibilityModal">{{ t('models.manageVisibleModels') }}</NButton>
       <NButton size="tiny" quaternary type="error" :loading="deleting" @click="handleDelete">{{ t('common.delete') }}</NButton>

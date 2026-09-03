@@ -103,7 +103,6 @@ export default {
     collapse: 'Collapse',
     start: 'Start',
     stop: 'Stop',
-    refresh: 'Refresh',
   },
 
   // Sidebar
@@ -733,6 +732,12 @@ export default {
     unexpectedFormat: 'Unexpected response format',
     foundModels: 'Found {count} models',
     fetchFailed: 'Failed to fetch models',
+    refreshModels: 'Refresh',
+    refreshModelsConfirmTitle: 'Model list changes detected',
+    refreshModelsConfirmContent: 'Refreshing would remove {removed} model(s) and add {added}. Removed: {removedList}',
+    refreshModelsConfirmAction: 'Replace model list',
+    refreshModelsSuccess: 'Model list updated ({count} models, {unavailable} unavailable)',
+    refreshModelsFailed: 'Failed to refresh provider models',
   },
 
   // Profiles

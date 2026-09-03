@@ -103,7 +103,6 @@ export default {
     collapse: '收起',
     start: '啟動',
     stop: '停止',
-    refresh: '重新整理',
   },
 
   // 側邊欄

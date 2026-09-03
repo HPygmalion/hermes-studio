@@ -24,6 +24,10 @@ function openCodeFreeStaticModels(): string[] {
   return PROVIDER_MODEL_CATALOG['opencode-free'] || []
 }
 
+function invalidateOpenCodeFreeCache(): void {
+  openCodeFreeCache = null
+}
+
 async function fetchOpenCodeFreeModels(force = false): Promise<string[]> {
   if (!force && openCodeFreeCache && (Date.now() - openCodeFreeCache.at) < OPENCODE_FREE_CACHE_TTL_MS) {
     return openCodeFreeCache.models
@@ -306,7 +310,6 @@ async function buildAvailableForProfile(
   profile: string,
   fetchCache: ProviderFetchCache,
   appConfig: Awaited<ReturnType<typeof readAppConfig>>,
-  force = false,
 ): Promise<{
   profile: string
   default: string
@@ -412,7 +415,7 @@ async function buildAvailableForProfile(
       }
     } else if (providerKey === 'opencode-free') {
       // OpenCode Free (keyless) — 实时感知 agent 判定的免费模型清单
-      modelsList = await fetchOpenCodeFreeModels(force)
+      modelsList = await fetchOpenCodeFreeModels()
     } else if (providerShouldFetchLiveModels(providerKey)) {
       if (envMapping.api_key_env) {
         const apiKey = envGetValue(envMapping.api_key_env)
@@ -474,7 +477,6 @@ async function buildAvailableForProfile(
 
 export async function getAvailable(ctx: any) {
   try {
-    const forceRefresh = ctx.query?.force === 'true' || ctx.query?.force === true
     const requestedProfile = requestedProfileName(ctx)
     if (!requestedProfile) {
       const appConfig = await readAppConfig()
@@ -484,7 +486,7 @@ export async function getAvailable(ctx: any) {
       const fetchCache: ProviderFetchCache = new Map()
       const visibleProfiles = visibleProfileNamesForUser(ctx)
       const profileResults = await Promise.all(
-        visibleProfiles.map(profile => buildAvailableForProfile(profile, fetchCache, appConfig, forceRefresh)),
+        visibleProfiles.map(profile => buildAvailableForProfile(profile, fetchCache, appConfig)),
       )
       const mergedGroups = mergeAvailableGroups(profileResults.flatMap(result => result.groups))
       const groupsWithAliases = applyModelAliases(mergedGroups, modelAliases)
@@ -521,7 +523,7 @@ export async function getAvailable(ctx: any) {
     const modelAliasesForProfile = normalizeAliases(appConfigForProfile.modelAliases)
     const modelVisibilityForProfile = normalizeModelVisibility(appConfigForProfile.modelVisibility)
     const customModelsForProfile = normalizeCustomModels(appConfigForProfile.customModels)
-    const profileResult = await buildAvailableForProfile(requestedProfile, new Map(), appConfigForProfile, forceRefresh)
+    const profileResult = await buildAvailableForProfile(requestedProfile, new Map(), appConfigForProfile)
     const profileGroupsWithAliases = applyModelAliases(profileResult.groups, modelAliasesForProfile)
     const visibleProfileGroups = applyModelVisibility(profileGroupsWithAliases, modelVisibilityForProfile)
     const visibleProfileDefault = resolveVisibleDefault(profileResult.default, profileResult.default_provider, visibleProfileGroups)
@@ -1115,5 +1117,109 @@ export async function setModelVisibility(ctx: any) {
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: err.message }
+  }
+}
+
+type ProviderRefreshDiff = { added: string[]; removed: string[]; unchanged: string[] }
+type ProviderRefreshResult = {
+  provider_id: string
+  applied: boolean
+  requires_confirmation: boolean
+  models: string[]
+  diff: ProviderRefreshDiff
+  message?: string
+}
+
+function diffModels(current: string[], remote: string[]): ProviderRefreshDiff {
+  const currentSet = new Set(current)
+  const remoteSet = new Set(remote)
+  return {
+    added: remote.filter(model => !currentSet.has(model)),
+    removed: current.filter(model => !remoteSet.has(model)),
+    unchanged: remote.filter(model => currentSet.has(model)),
+  }
+}
+
+// 手动刷新某个供应商的模型列表（不写死持久化，保持自动更新语义）。
+// 返回差异；有移除时 requires_confirmation=true，由前端确认后提交新列表。
+export async function refreshProviderModels(ctx: any) {
+  try {
+    const profile = requestedProfileName(ctx) || getActiveProfileName() || 'default'
+    const provider = String(
+      ctx.params?.provider || ctx.request?.body?.provider || ctx.query?.provider || '',
+    ).trim()
+
+    if (!provider) {
+      ctx.status = 400
+      ctx.body = { error: 'Missing provider' }
+      return
+    }
+
+    const config = await readConfigYamlForProfile(profile)
+    const preset = PROVIDER_PRESETS.find((p: any) => p.value === provider)
+
+    const isCustom = provider.startsWith('custom:')
+    const isOpenCodeFree = provider === 'opencode-free'
+    const isLiveProvider = isOpenCodeFree || providerShouldFetchLiveModels(provider)
+
+    if (!isCustom && !isOpenCodeFree && !providerShouldFetchLiveModels(provider)) {
+      ctx.body = {
+        provider_id: provider,
+        applied: false,
+        requires_confirmation: false,
+        models: PROVIDER_MODEL_CATALOG[provider] || preset?.models || [],
+        diff: { added: [], removed: [], unchanged: [] },
+        message: 'Provider does not expose a live model catalog',
+      } satisfies ProviderRefreshResult
+      return
+    }
+
+    // Resolve base_url + api_key and force a fresh remote fetch.
+    let baseUrl = preset?.base_url || ''
+    let apiKey = ''
+    let remoteModels: string[] = []
+
+    if (isOpenCodeFree) {
+      remoteModels = await fetchOpenCodeFreeModels(true)
+    } else if (isCustom) {
+      const cps = Array.isArray(config.custom_providers) ? config.custom_providers as any[] : []
+      const cpName = provider.replace(/^custom:/, '').replace(/-/g, ' ')
+      const cp = cps.find(item => providerKeyForCustom(String(item.name || '')) === provider)
+      if (!cp) {
+        ctx.status = 404
+        ctx.body = { error: 'Custom provider not found' }
+        return
+      }
+      baseUrl = String(cp.base_url || '').replace(/\/+$/, '')
+      apiKey = String(cp.api_key || '')
+      remoteModels = await fetchProviderModels(baseUrl, apiKey)
+    } else {
+      const envMapping = PROVIDER_ENV_MAP[provider]
+      let envContent = ''
+      try { envContent = await readFile(profileEnvPath(profile), 'utf-8') } catch {}
+      const { envGetValue } = envReader(envContent)
+      if (envMapping?.api_key_env) apiKey = envGetValue(envMapping.api_key_env)
+      if (envMapping?.base_url_env) baseUrl = envGetValue(envMapping.base_url_env) || baseUrl
+      remoteModels = await fetchProviderModels(baseUrl, apiKey, provider === 'openrouter')
+    }
+
+    // Current displayed models as diff baseline (do not mutate config).
+    const currentModels = isOpenCodeFree
+      ? (openCodeFreeCache?.models || openCodeFreeStaticModels())
+      : (PROVIDER_MODEL_CATALOG[provider] || preset?.models || [])
+
+    const diff = diffModels(currentModels, remoteModels)
+
+    ctx.body = {
+      provider_id: provider,
+      applied: true,
+      requires_confirmation: diff.removed.length > 0,
+      models: remoteModels,
+      diff,
+      message: undefined,
+    } satisfies ProviderRefreshResult
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err?.message || 'Failed to refresh provider models' }
   }
 }

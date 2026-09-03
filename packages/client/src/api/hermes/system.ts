@@ -146,15 +146,13 @@ export async function fetchConfigModels(): Promise<ConfigModelsResponse> {
   return request<ConfigModelsResponse>('/api/hermes/config/models')
 }
 
-export async function fetchAvailableModels(force = false): Promise<AvailableModelsResponse> {
-  const params = force ? '?force=true' : ''
-  return request<AvailableModelsResponse>(`/api/hermes/available-models${params}`)
+export async function fetchAvailableModels(): Promise<AvailableModelsResponse> {
+  return request<AvailableModelsResponse>('/api/hermes/available-models')
 }
 
-export async function fetchAvailableModelsForProfile(profile: string, force = false): Promise<AvailableModelsResponse> {
+export async function fetchAvailableModelsForProfile(profile: string): Promise<AvailableModelsResponse> {
   const params = new URLSearchParams()
   params.set('profile', profile || 'default')
-  if (force) params.set('force', 'true')
   return request<AvailableModelsResponse>(`/api/hermes/available-models?${params.toString()}`)
 }
 
@@ -167,6 +165,22 @@ export async function fetchProviderModels(data: {
     method: 'POST',
     body: JSON.stringify(data),
   })
+}
+
+export interface ProviderModelRefreshResult {
+  provider_id: string
+  applied: boolean
+  requires_confirmation: boolean
+  models: string[]
+  diff: { added: string[]; removed: string[]; unchanged: string[] }
+  message?: string
+}
+
+export async function refreshProviderModels(provider: string): Promise<ProviderModelRefreshResult> {
+  return request<ProviderModelRefreshResult>(
+    `/api/hermes/config/providers/${encodeURIComponent(provider)}/models/refresh`,
+    { method: 'POST', body: JSON.stringify({}) },
+  )
 }
 
 export async function updateDefaultModel(data: {
