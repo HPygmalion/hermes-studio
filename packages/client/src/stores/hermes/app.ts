@@ -16,6 +16,7 @@ import {
   type ModelVisibilityRule,
 } from '@/api/hermes/system'
 import { hasApiKey } from '@/api/client'
+import { useChatStore } from './chat'
 
 const WEB_UI_VERSION = __APP_VERSION__
 
@@ -235,6 +236,15 @@ export const useAppStore = defineStore('app', () => {
       if (provider && !modelGroups.value.find(g => g.provider === provider)?.models.includes(modelId)) {
         const res = await persistCustomModel({ provider, model: modelId })
         customModels.value = res.custom_models || {}
+      }
+      // 增强：侧栏切换默认模型时，同步更新当前活跃会话，让切换立即生效
+      try {
+        const chatStore = useChatStore()
+        if (chatStore.activeSessionId) {
+          await chatStore.switchSessionModel(modelId, provider)
+        }
+      } catch (err: any) {
+        console.warn('Failed to sync active session model:', err)
       }
     } catch (err: any) {
       console.error('Failed to switch model:', err)

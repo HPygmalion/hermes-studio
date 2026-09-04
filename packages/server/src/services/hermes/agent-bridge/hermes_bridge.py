@@ -638,6 +638,19 @@ def _load_reasoning_config() -> dict[str, Any] | None:
         return None
 
 
+def _resolve_reasoning_config(session_effort: str | None) -> dict[str, Any] | None:
+    """Per-session reasoning effort overrides config; otherwise fall back to config."""
+    if session_effort is not None and str(session_effort).strip():
+        try:
+            from hermes_constants import parse_reasoning_effort
+            parsed = parse_reasoning_effort(session_effort)
+            if parsed is not None:
+                return parsed
+        except Exception:
+            pass
+    return _load_reasoning_config()
+
+
 def _load_service_tier() -> str | None:
     raw = str((_load_cfg().get("agent") or {}).get("service_tier", "") or "").strip().lower()
     if raw in {"fast", "priority", "on"}:
@@ -738,6 +751,7 @@ class AgentPool:
         profile: str | None = None,
         model: str | None = None,
         provider: str | None = None,
+        reasoning_effort: str | None = None,
     ) -> AgentSession:
         requested_model = str(model or "").strip()
         requested_provider = str(provider or "").strip()
@@ -784,7 +798,7 @@ class AgentPool:
                     credential_pool=runtime.get("credential_pool"),
                     quiet_mode=True,
                     verbose_logging=False,
-                    reasoning_config=_load_reasoning_config(),
+                    reasoning_config=_resolve_reasoning_config(reasoning_effort),
                     service_tier=_load_service_tier(),
                     enabled_toolsets=_load_enabled_toolsets(),
                     platform=_bridge_platform(),
@@ -1421,8 +1435,9 @@ class AgentPool:
         model: str | None = None,
         provider: str | None = None,
         source: str | None = None,
+        reasoning_effort: str | None = None,
     ) -> RunRecord:
-        session = self.get_or_create(session_id, profile=profile, model=model, provider=provider)
+        session = self.get_or_create(session_id, profile=profile, model=model, provider=provider, reasoning_effort=reasoning_effort)
         with session.lock:
             if session.running:
                 raise RuntimeError(f"session {session_id} is already running")
@@ -2061,6 +2076,7 @@ class BridgeServer:
             profile = req.get("profile")
             model = req.get("model")
             provider = req.get("provider")
+            reasoning_effort = req.get("reasoning_effort")
             source = req.get("source")
             record = self.pool.start_chat(
                 session_id,
@@ -2073,6 +2089,7 @@ class BridgeServer:
                 model,
                 provider,
                 source,
+                reasoning_effort,
             )
             if req.get("wait"):
                 timeout = float(req.get("timeout", 0) or 0)

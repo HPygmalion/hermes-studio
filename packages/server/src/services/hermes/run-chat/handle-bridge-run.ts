@@ -376,6 +376,7 @@ export async function handleBridgeRun(
         ...(bridgeStorageInput !== undefined ? { storage_message: bridgeStorageInput } : {}),
         ...(resolvedModel ? { model: resolvedModel } : {}),
         ...(resolvedProvider ? { provider: resolvedProvider } : {}),
+        ...(sessionRow?.reasoning_effort ? { reasoning_effort: sessionRow.reasoning_effort } : {}),
       },
     )
     state.runId = started.run_id

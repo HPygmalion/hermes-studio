@@ -45,6 +45,7 @@ export interface AgentBridgeChatOptions {
   storage_message?: AgentBridgeMessage
   model?: string
   provider?: string
+  reasoning_effort?: string
   source?: string
   wait?: boolean
   timeout?: number
@@ -410,6 +411,7 @@ export class AgentBridgeClient {
       ...(profile ? { profile } : {}),
       ...(options.model ? { model: options.model } : {}),
       ...(options.provider ? { provider: options.provider } : {}),
+      ...(options.reasoning_effort ? { reasoning_effort: options.reasoning_effort } : {}),
       ...(options.source ? { source: options.source } : {}),
       ...(options.wait ? { wait: true } : {}),
       ...(options.timeout ? { timeout: options.timeout } : {}),

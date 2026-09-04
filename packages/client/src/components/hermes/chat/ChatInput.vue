@@ -9,7 +9,7 @@ import { NButton, NTooltip, NSwitch, NModal, NInputNumber, NPopover, NSelect, us
 import { computed, ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
-import ModelSelectorModal from './ModelSelectorModal.vue'
+
 
 const chatStore = useChatStore()
 const appStore = useAppStore()
@@ -111,28 +111,21 @@ watch(autoPlaySpeech, (value) => {
 
 const canSend = computed(() => inputText.value.trim() || attachments.value.length > 0)
 
-// --- Composer model switcher (ModelSelectorModal, session-scoped) ---
-const activeSessionModel = computed(() => chatStore.activeSession?.model || appStore.selectedModel || '')
-const activeSessionProvider = computed(() => chatStore.activeSession?.provider || appStore.selectedProvider || '')
-const compactModelLabel = computed(() => (
-  activeSessionModel.value ? appStore.displayModelName(activeSessionModel.value, activeSessionProvider.value) : t('models.selectModel')
-))
-const showModelModal = ref(false)
-
 // --- Reasoning effort selector (Naive NSelect) ---
+// 取值对齐 agent: ''=默认(auto), none=关闭, low/medium/high=级别
 const reasoningEffortOptions = [
-  { label: t('chat.reasoningEffortAuto'), value: 'auto' },
-  { label: t('chat.reasoningEffortNone'), value: '' },
+  { label: t('chat.reasoningEffortAuto'), value: '' },
+  { label: t('chat.reasoningEffortNone'), value: 'none' },
   { label: t('chat.reasoningEffortLow'), value: 'low' },
   { label: t('chat.reasoningEffortMedium'), value: 'medium' },
   { label: t('chat.reasoningEffortHigh'), value: 'high' },
 ]
-const activeSessionReasoningEffort = computed(() => chatStore.activeSession?.reasoningEffort || 'auto')
+const activeSessionReasoningEffort = computed(() => chatStore.activeSession?.reasoningEffort || '')
 const reasoningEffortShort = computed(() => {
   const value = activeSessionReasoningEffort.value
   const map: Record<string, string> = {
-    auto: t('chat.reasoningEffortAutoShort'),
-    '': t('chat.reasoningEffortNoneShort'),
+    '': t('chat.reasoningEffortAutoShort'),
+    none: t('chat.reasoningEffortNoneShort'),
     low: t('chat.reasoningEffortLowShort'),
     medium: t('chat.reasoningEffortMediumShort'),
     high: t('chat.reasoningEffortHighShort'),
@@ -141,7 +134,7 @@ const reasoningEffortShort = computed(() => {
 })
 function onReasoningEffortChange(value: string | number | Array<string | number> | null) {
   const key = typeof value === 'string' ? value : ''
-  void chatStore.setSessionReasoningEffort(key === 'auto' ? '' : key, undefined)
+  void chatStore.setSessionReasoningEffort(key, undefined)
 }
 
 function scrollCommandIntoView() {
@@ -640,13 +633,6 @@ function isImage(type: string): boolean {
         </div>
       </Transition>
       <div class="input-actions">
-        <NButton size="small" quaternary class="composer-model-btn" @click="showModelModal = true">
-          <template #icon>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
-          </template>
-          <span class="input-composer-model">{{ compactModelLabel }}</span>
-        </NButton>
-        <ModelSelectorModal :show="showModelModal" @update:show="showModelModal = $event" />
         <NPopover trigger="click" placement="top-start" :show-arrow="false" :style="{ padding: '6px', width: '200px' }">
           <template #trigger>
             <NButton size="small" quaternary class="composer-reasoning-btn" :class="{ 'reasoning-active': activeSessionReasoningEffort !== 'auto' }">
@@ -997,11 +983,9 @@ function isImage(type: string): boolean {
   align-items: center;
 }
 
-.composer-model-btn,
 .composer-reasoning-btn {
   font-size: 12px;
 
-  .input-composer-model,
   .input-composer-reasoning {
     max-width: 180px;
     overflow: hidden;
